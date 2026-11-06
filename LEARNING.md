@@ -10,7 +10,9 @@ Broke: The first running containers had only `eth0` until `containerlab deploy -
 
 Learned: The checkpoint order is design first (diagram and assumptions), then the build, then a requirement change. Tunnel encryption and encrypting the log payload are separate. Containerlab's Codespaces guide uses a `devcontainer-dind` image and notes that Codespaces cannot run VM-based nodes, which matches the brief's "containers only" rule. Source: the assessment PDF, [containerlab Codespaces manual](https://containerlab.dev/manual/codespaces/), and this Cursor session (AI). The address plan and tool choices still need to be verified by deploying them.
 
-Next: The core path now runs. A later day covers the requirement change, then the readout.
+Next: Present from `docs/readout.md`. Apply the requirement change only after it arrives.
+
+Failure test, same day: with `wg0` down, Site A still logged the deny and the collector stayed at 2 lines. `ip link set wg0 up` did not restore the route `10.20.0.0/16 dev wg0`. The collector grew again only after that route was replaced and `rsyslogd` on `site-a-fw` was started again. `wg show` still printed an old handshake while the interface was down, so the interface state and the collector file are the checks that matter.
 
 Added after the design draft: the first containers came up with only `eth0` because a second deploy refused to replace them. `containerlab deploy --reconfigure` created `eth1` and the later interfaces, and the zone pings succeeded. WireGuard's kernel interface works in this Codespace. A ping to `10.255.0.2` failed with "Required key not available" until that address was added to the peer `allowed-ips`. A plain nftables log was not used. NFLOG group 1 plus ulogd wrote `/var/log/nft.log`, and rsyslog forwarded it with TCP to `10.20.10.10:514`. The collector file stayed missing until it existed and was writable. After that, the deny line arrived. Source: this Codespace, the containerlab deploy output, and the rsyslog 8.2608 warnings. AI drafted the rules; the checks above are what confirmed them.
 

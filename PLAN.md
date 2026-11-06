@@ -4,7 +4,7 @@ Finish the core before any stretch item. The core is a private tunnel, two zones
 
 Run each remaining step in order. Do not start a step until the previous "Pass" check is true. After each step that changes the lab, commit and add a `LEARNING.md` entry.
 
-You are here: the core path has been demonstrated once. Codespace `hm-net` is the only one to use. Do not start `humble parakeet`. Remaining work is the requirement change when it arrives, the README polish, and the readout. Stretch stays optional.
+You are here: the core path rebuilds from `scripts/bringup-core.sh`, and the tunnel failure test is written in `docs/failure-test.md`. The readout script is `docs/readout.md`. The requirement change has not arrived. Do not start `humble parakeet`.
 
 ## Facts, so the commands stay exact
 
