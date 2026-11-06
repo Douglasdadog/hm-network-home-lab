@@ -1,6 +1,7 @@
-# Empty lab: five linux nodes and their addresses. No firewall policy and no tunnel yet.
+# Nodes, links, and lab addresses only.
+# eth0 is containerlab's management network and is left to Docker.
+# The tunnel, routes, nftables, and rsyslog are applied afterward by scripts/bringup-core.sh.
 # The linux kind does not apply link-level ipv4 fields, so addresses are set with exec.
-# eth0 is containerlab's management interface and is left alone.
 name: hm-net
 
 topology:
