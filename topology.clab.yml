@@ -1,0 +1,43 @@
+# Empty lab: five linux nodes and their addresses. No firewall policy and no tunnel yet.
+# The linux kind does not apply link-level ipv4 fields, so addresses are set with exec.
+# eth0 is containerlab's management interface and is left alone.
+name: hm-net
+
+topology:
+  defaults:
+    kind: linux
+    image: ghcr.io/srl-labs/network-multitool:latest
+
+  nodes:
+    site-a-fw:
+      exec:
+        - ip link set eth1 up
+        - ip address add 10.10.10.1/24 dev eth1
+        - ip link set eth2 up
+        - ip address add 10.10.20.1/24 dev eth2
+        - ip link set eth3 up
+        - ip address add 192.0.2.1/24 dev eth3
+    app-01:
+      exec:
+        - ip link set eth1 up
+        - ip address add 10.10.10.10/24 dev eth1
+    mgmt-01:
+      exec:
+        - ip link set eth1 up
+        - ip address add 10.10.20.10/24 dev eth1
+    site-b-fw:
+      exec:
+        - ip link set eth1 up
+        - ip address add 10.20.10.1/24 dev eth1
+        - ip link set eth2 up
+        - ip address add 192.0.2.2/24 dev eth2
+    collector:
+      exec:
+        - ip link set eth1 up
+        - ip address add 10.20.10.10/24 dev eth1
+
+  links:
+    - endpoints: ["site-a-fw:eth1", "app-01:eth1"]
+    - endpoints: ["site-a-fw:eth2", "mgmt-01:eth1"]
+    - endpoints: ["site-b-fw:eth1", "collector:eth1"]
+    - endpoints: ["site-a-fw:eth3", "site-b-fw:eth2"]
