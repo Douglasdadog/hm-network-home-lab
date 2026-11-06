@@ -4,23 +4,70 @@ Checked on 2026-11-06 in Codespace `hm-net`. `topology.clab.yml` creates the fiv
 
 The ping from `app-01` to `mgmt-01` does not cross the tunnel. The firewall drops it on Site A. A copy of that drop is what crosses the tunnel and lands in `/var/log/site-a.log`.
 
-## Picture
+## Picture 1: the two buildings
+
+Site A has two rooms and one guard. Site B has one guard and one diary book. The only road between the buildings is the fake public link, and the private tube sits on that road.
 
 ```mermaid
 flowchart LR
-  app01["app-01<br/>eth1 10.10.10.10"]
-  mgmt01["mgmt-01<br/>eth1 10.10.20.10"]
-  fwA["site-a-fw<br/>eth1 10.10.10.1 apps<br/>eth2 10.10.20.1 mgmt<br/>eth3 192.0.2.1 underlay<br/>wg0 10.255.0.1"]
-  fwB["site-b-fw<br/>eth1 10.20.10.1 collect<br/>eth2 192.0.2.2 underlay<br/>wg0 10.255.0.2"]
-  col["collector<br/>eth1 10.20.10.10<br/>TCP 514"]
+  subgraph siteA ["Site A, the bank"]
+    app01["apps room<br/>app-01<br/>eth1 10.10.10.10"]
+    mgmt01["mgmt room<br/>mgmt-01<br/>eth1 10.10.20.10"]
+    fwA["guard site-a-fw<br/>eth1 10.10.10.1 door to apps<br/>eth2 10.10.20.1 door to mgmt<br/>eth3 192.0.2.1 door to the road<br/>wg0 10.255.0.1 inside the tube<br/>local diary /var/log/nft.log"]
+    app01 --- fwA
+    mgmt01 --- fwA
+  end
 
-  app01 --- fwA
-  mgmt01 --- fwA
-  fwA -->|"UDP 51820"| fwB
-  fwB --- col
+  subgraph road ["Fake public road 192.0.2.0/24"]
+    tube["WireGuard tube<br/>UDP 51820<br/>192.0.2.1 to 192.0.2.2"]
+  end
+
+  subgraph siteB ["Site B, the diary building"]
+    fwB["guard site-b-fw<br/>eth2 192.0.2.2 door to the road<br/>wg0 10.255.0.2 inside the tube<br/>eth1 10.20.10.1 door to the book"]
+    col["diary book collector<br/>eth1 10.20.10.10<br/>TCP 514<br/>/var/log/site-a.log"]
+    fwB --- col
+  end
+
+  fwA --- tube --- fwB
 ```
 
-Every node also has `eth0` on containerlab's management network `172.20.20.0/24`. That network is how packages are installed. It is not drawn above because it is not a path from Site A to Site B. No lab port is published on the Codespace.
+Every node also has `eth0` on `172.20.20.0/24`. That is the workshop network used to install tools. It is not a door from Site A to Site B, so it is not in the picture. No lab port is published on the Codespace.
+
+## Picture 2: the ping dies at the guard
+
+This is the command in the demo: `app-01` pings `10.10.20.10`. The ping does not enter the tube.
+
+```mermaid
+flowchart LR
+  app01["1. app-01<br/>10.10.10.10<br/>sends a ping"]
+  door["2. site-a-fw eth1<br/>10.10.10.1<br/>packet comes in"]
+  drop["3. same guard drops it<br/>NFLOG group 1<br/>prefix hm-site-a<br/>policy drop"]
+  mgmt["4. mgmt-01<br/>10.10.20.10<br/>never receives it"]
+
+  app01 -->|"route via 10.10.10.1"| door --> drop
+  drop -.->|"does not arrive<br/>ping shows 100% loss"| mgmt
+```
+
+Say this while pointing: "The rooms are separate. The guard writes down the attempt, then throws the packet away."
+
+## Picture 3: only the diary line crosses
+
+The note about the drop is a different trip. It starts on the Site A guard and ends in the book at Site B.
+
+```mermaid
+flowchart LR
+  note["1. ulogd on site-a-fw<br/>writes /var/log/nft.log"]
+  copy["2. rsyslog on site-a-fw<br/>TCP 514<br/>from 10.255.0.1"]
+  tube["3. WireGuard<br/>encrypts that TCP<br/>UDP 51820<br/>192.0.2.1 to 192.0.2.2"]
+  guardB["4. site-b-fw<br/>allows only this flow<br/>wg0 to eth1<br/>to 10.20.10.10 port 514"]
+  book["5. collector<br/>appends /var/log/site-a.log"]
+
+  note --> copy --> tube --> guardB --> book
+```
+
+Say this while pointing: "The ping died in picture 2. Picture 3 is a copy of the note, carried through the locked tube."
+
+The line inside the tube is still plain text. WireGuard locks the tube. It does not lock the letter. TLS on port 6514 would lock the letter, and that is not built.
 
 ## Where each address sits
 
