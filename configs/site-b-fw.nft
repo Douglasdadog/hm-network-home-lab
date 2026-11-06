@@ -1,0 +1,21 @@
+table inet filter {
+  chain input {
+    type filter hook input priority 0; policy drop;
+    ct state established,related accept
+    iif "eth2" udp dport 51820 ip saddr 192.0.2.1 accept
+    iif "lo" accept
+  }
+
+  chain forward {
+    type filter hook forward priority 0; policy drop;
+    ct state established,related accept
+    iif "wg0" oif "eth1" ip saddr 10.255.0.1 ip daddr 10.20.10.10 tcp dport 514 accept
+  }
+
+  chain output {
+    type filter hook output priority 0; policy drop;
+    ct state established,related accept
+    oif "eth0" accept
+    oif "eth2" udp dport 51820 ip daddr 192.0.2.1 accept
+  }
+}

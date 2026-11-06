@@ -1,6 +1,6 @@
 # Topology
 
-Draft for the first checkpoint. The empty containerlab file is `topology.clab.yml`. It creates the nodes and addresses below, and does not configure the tunnel or nftables.
+Checked on 2026-11-06 in Codespace `hm-net`. `topology.clab.yml` creates the nodes and addresses. `scripts/bringup-core.sh` adds the tunnel, the drop policy, and the log path. A denied ping from `app-01` to `mgmt-01` was written to `/var/log/site-a.log` on the collector.
 
 ## Picture
 

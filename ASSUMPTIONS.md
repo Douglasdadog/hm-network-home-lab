@@ -2,10 +2,10 @@
 
 Stated so they can be challenged. If one of these is wrong, the topology and the firewall policy both change.
 
-Checkpoint status, 2026-11-06: the Codespace `hm-net` exists and is stopped. `containerlab deploy` has not been run. None of the addresses below have been observed on a running container.
+Checkpoint status, 2026-11-06: `containerlab deploy` has been run in Codespace `hm-net`. The zone pings, the WireGuard handshake, and a denied cross-zone line in `/var/log/site-a.log` were observed. The Day 3 message was not sent; the design is presented with the finished lab.
 
 1. **Two zones on Site A are enough for the core.** `apps` and `mgmt` sit on different subnets. The Site A firewall is the only gateway between them, and between either zone and Site B. A third zone (for example a DMZ) is out of scope until a later requirement asks for it.
-2. **The "untrusted path" is a lab network, not the real internet.** Both firewalls share one containerlab bridge addressed from `192.0.2.0/24` (RFC 5737). That range is documentation space. It stands in for an untrusted underlay. No container gets a default route to the Codespace host, and no lab port is published.
+2. **The "untrusted path" is a lab network, not the real internet.** Both firewalls share one containerlab link addressed from `192.0.2.0/24` (RFC 5737). That range is documentation space. It stands in for an untrusted underlay. Each container also has `eth0` on containerlab's management network `172.20.20.0/24`, with a default route there. That network is how the tools are installed. It is not a path to Site B, and no lab port is published on the Codespace.
 3. **WireGuard is the tunnel.** It is the encrypted site-to-site path. strongSwan stays unused unless WireGuard cannot run inside this Codespace image. Tunnel encryption and log encryption are different jobs: WireGuard protects the path; rsyslog TLS (stretch) would protect the log records themselves.
 4. **Core log transport is TCP syslog inside the tunnel, not TLS yet.** The Site A firewall is the log source. nftables writes prefixed kernel log lines, rsyslog on that firewall forwards them to the collector. UDP 514 is not the core choice, because a dropped datagram is a lost log and is harder to demonstrate. TLS to port 6514 is stretch work, after the plain path works.
 5. **The collector is the only Site B server.** Site B is one subnet. There is no second zone there until the brief requires one.

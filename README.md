@@ -6,7 +6,7 @@ This runs in GitHub Codespaces with [containerlab](https://containerlab.dev/manu
 
 ## Status
 
-The Codespaces environment and an empty containerlab topology are in the repo. Firewall rules and the tunnel are not.
+The core path has been run once in Codespace `hm-net`: five nodes, a WireGuard tunnel, default deny, and one Site A firewall line stored on the collector. Rebuild it with the commands below. Private keys are generated inside the containers and are not in this repo.
 
 | Doc | What it is |
 | --- | --- |
@@ -14,19 +14,31 @@ The Codespaces environment and an empty containerlab topology are in the repo. F
 | [docs/topology.md](docs/topology.md) | IP plan, zones, and the path a log takes |
 | [ASSUMPTIONS.md](ASSUMPTIONS.md) | Every assumption the design depends on |
 | [LEARNING.md](LEARNING.md) | Short daily notes |
+| [PLAN.md](PLAN.md) | Command-level build sequence |
 
 ## Run
 
 Use a 2-core Codespace. In GitHub, set the Codespaces idle timeout to 10 minutes, and stop the codespace when you step away.
 
-From the codespace terminal:
+From the Codespace terminal, in `/workspaces/hm-network-home-lab`:
 
 ```bash
-containerlab deploy -t topology.clab.yml
-containerlab inspect -t topology.clab.yml
+containerlab deploy -t topology.clab.yml --reconfigure
+sh scripts/bringup-core.sh
 ```
 
-A node is up when `ip address` inside it shows the address from `docs/topology.md`. `eth0` is containerlab's management interface. The lab addresses are on `eth1` and, for the firewalls, the later interfaces.
+`--reconfigure` is required when the containers already exist. The first deploy of a fresh Codespace can omit it.
+
+Prove the log path:
+
+```bash
+docker exec clab-hm-net-app-01 ping -c 1 -W 1 10.10.20.10
+docker exec clab-hm-net-collector tail -n 5 /var/log/site-a.log
+```
+
+The ping loses every packet. The collector file contains a line tagged `hm-site-a` with `SRC=10.10.10.10` and `DST=10.10.20.10`.
+
+`eth0` is containerlab's management network, `172.20.20.0/24`. The lab addresses are on the later interfaces. `docker ps` must not show a host port mapping such as `0.0.0.0:80->80`.
 
 ```bash
 containerlab destroy -t topology.clab.yml
