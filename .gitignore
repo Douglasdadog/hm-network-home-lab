@@ -6,3 +6,4 @@ Desktop.ini
 .env.*
 *.key
 secrets/
+PLAN.md

@@ -14,7 +14,6 @@ The core path has been run once in Codespace `hm-net`: five nodes, a WireGuard t
 | [docs/topology.md](docs/topology.md) | IP plan, zones, and the path a log takes |
 | [ASSUMPTIONS.md](ASSUMPTIONS.md) | Every assumption the design depends on |
 | [LEARNING.md](LEARNING.md) | Short daily notes |
-| [PLAN.md](PLAN.md) | Command-level build sequence |
 | [docs/failure-test.md](docs/failure-test.md) | What the tunnel outage lost, and how it was repaired |
 | [docs/readout.md](docs/readout.md) | What to say in the 20 minutes |
 
