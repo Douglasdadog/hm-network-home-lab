@@ -1,6 +1,4 @@
-# Engineering Assumptions
-
-Baseline technical assumptions and design constraints for the Network Home Lab: Secure Log Transport practical assessment.
+#Assumptions
 
 1. **Site A Zone Segmentation:** Site A is scoped to two internal broadcast domains: `apps` (`10.10.10.0/24`) and `mgmt` (`10.10.20.0/24`). `site-a-fw` acts as the default gateway terminating both subnets and enforces inter-zone isolation.
 2. **Untrusted Underlay Transport:** The transit link interconnecting the sites uses RFC 5737 documentation space (`192.0.2.0/24`) to simulate an untrusted transport medium. Container management network `eth0` (`172.20.20.0/24`) is strictly for tool provisioning and is not routable to the lab data plane.
