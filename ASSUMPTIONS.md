@@ -1,17 +1,14 @@
-# Assumptions
+# Engineering Assumptions
 
-Stated so they can be challenged. If one of these is wrong, the topology and the firewall policy both change.
+Baseline technical assumptions and design constraints for the Network Home Lab: Secure Log Transport practical assessment.
 
-Checkpoint status, 2026-11-06: `containerlab deploy` has been run in Codespace `hm-net`. The zone pings, the WireGuard handshake, and a denied cross-zone line in `/var/log/site-a.log` were observed. The Day 3 message was not sent; the design is presented with the finished lab.
-
-1. **Two zones on Site A are enough for the core.** `apps` and `mgmt` sit on different subnets. The Site A firewall is the only gateway between them, and between either zone and Site B. A third zone (for example a DMZ) is out of scope until a later requirement asks for it.
-2. **The "untrusted path" is a lab network, not the real internet.** Both firewalls share one containerlab link addressed from `192.0.2.0/24` (RFC 5737). That range is documentation space. It stands in for an untrusted underlay. Each container also has `eth0` on containerlab's management network `172.20.20.0/24`, with a default route there. That network is how the tools are installed. It is not a path to Site B, and no lab port is published on the Codespace.
-3. **WireGuard is the tunnel.** It is the encrypted site-to-site path. strongSwan stays unused unless WireGuard cannot run inside this Codespace image. Tunnel encryption and log encryption are different jobs: WireGuard protects the path; rsyslog TLS (stretch) would protect the log records themselves.
-4. **Core log transport is TCP syslog inside the tunnel, not TLS yet.** The Site A firewall is the log source. The apps-to-mgmt drop is sent to NFLOG group 1. ulogd writes `/var/log/nft.log`. rsyslog on that firewall forwards the file with TCP to the collector. A plain nftables `log` is not used, because in this Codespace it would go to the shared kernel buffer. UDP 514 is not the core choice, because a dropped datagram is a lost log. TLS to port 6514 is stretch work, after the plain path works.
-5. **The collector is the only Site B server.** Site B is one subnet. There is no second zone there until the brief requires one.
-6. **Default deny, and the allow list is only the log flow.** Each firewall starts from drop. Permanent allows are: WireGuard UDP `51820` between the two underlay addresses, and TCP `514` from the Site A firewall's tunnel address to the collector. Return traffic is stateful. Traffic between `apps` and `mgmt` is denied. Hosts in the zones do not send logs and cannot reach Site B.
-7. **ICMP is a temporary bring-up tool.** Echo between the two tunnel addresses may be allowed while proving the path, then removed before the "only what the log flow needs" demonstration.
-8. **The nodes start from `ghcr.io/srl-labs/network-multitool`.** That image has `ip` and ping. It does not include nftables, wireguard-tools, or rsyslog. Those packages are installed with `apk` after the empty lab boots, and the commands are written down. A custom image that removes the manual install is stretch work, not part of the core.
-9. **Codespaces stays on the 2-core machine.** The containerlab docs show a 4-core example. This lab follows the assessment quota rule: 2-core, idle timeout 10 minutes, stop the codespace when stepping away, no payment method.
-10. **A shared L2 underlay is enough to practice routing.** Hosts use their zone gateway. Each firewall routes the remote site's prefix through `wg0`. A third "internet" router is not in the core design.
-11. **Names in configs are roles, not organizations.** `site-a-fw`, `site-b-fw`, `app-01`, `mgmt-01`, `collector`.
+1. **Site A Zone Segmentation:** Site A is scoped to two internal broadcast domains: `apps` (`10.10.10.0/24`) and `mgmt` (`10.10.20.0/24`). `site-a-fw` acts as the default gateway terminating both subnets and enforces inter-zone isolation.
+2. **Untrusted Underlay Transport:** The transit link interconnecting the sites uses RFC 5737 documentation space (`192.0.2.0/24`) to simulate an untrusted transport medium. Container management network `eth0` (`172.20.20.0/24`) is strictly for tool provisioning and is not routable to the lab data plane.
+3. **Site-to-Site Tunneling:** WireGuard point-to-point interface `wg0` (`10.255.0.0/30`) over UDP `51820` provides layer-3 cryptographic encapsulation across the transit link.
+4. **Log Transport Protocol:** Core firewall drop telemetry is transmitted using TCP `514` to prevent unacknowledged log loss during transit. Telemetry is sourced from the firewall's tunnel IP (`10.255.0.1`) and directed to the collector (`10.20.10.10`).
+5. **Site B Platform Architecture:** Site B consists of a single management zone (`10.20.10.0/24`) hosting the log collector behind `site-b-fw`.
+6. **Firewall Policy Baseline:** Both firewalls operate on stateful default-deny (`policy drop` on input, forward, and output chains). The only permitted inter-site transit flow is WireGuard UDP `51820` on the underlay and TCP `514` inside the tunnel.
+7. **Ephemeral Cryptographic Material:** Private keys are generated dynamically inside containers at initialization and are excluded from git repositories.
+8. **Container Host Isolation:** Standard nftables logging is diverted via `NFLOG group 1` to `ulogd` to isolate packet records within container network namespaces and prevent host kernel buffer (`dmesg`) leakage.
+9. **Infrastructure Footprint:** Built within GitHub Codespaces free-tier constraints (2-core architecture, 10-minute idle timeouts).
+10. **Data Privacy:** All network addresses utilize RFC 1918 private ranges or RFC 5737 documentation blocks. Host port publishing (`ports:`) is disabled.
