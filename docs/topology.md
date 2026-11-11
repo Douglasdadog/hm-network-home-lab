@@ -26,17 +26,21 @@ mgmt-01 10.10.20.10
 
 ```mermaid
 flowchart LR
-  app01[app-01 10.10.10.10]
-  fwA[site-a-fw guard]
-  mgmt01[mgmt-01 10.10.20.10]
-  tube[WireGuard UDP 51820]
-  fwB[site-b-fw]
-  col[collector 10.20.10.10]
-  app01 --> fwA
-  fwA --> mgmt01
-  fwA --> tube
-  tube --> fwB
-  fwB --> col
+  subgraph A["SITE A"]
+    direction TB
+    app01["app-01\n10.10.10.10"]
+    mgmt01["mgmt-01\n10.10.20.10"]
+    fwA["site-a-fw\neth1 10.10.10.1  eth2 10.10.20.1\neth3 192.0.2.1  wg0 10.255.0.1"]
+    app01 -->|"eth1 — apps zone"| fwA
+    mgmt01 -->|"eth2 — mgmt zone"| fwA
+  end
+  subgraph B["SITE B"]
+    direction TB
+    fwB["site-b-fw\neth2 192.0.2.2  wg0 10.255.0.2\neth1 10.20.10.1"]
+    col["collector\n10.20.10.10"]
+    fwB -->|"eth1"| col
+  end
+  fwA <-->|"WireGuard UDP 51820\nunderlay 192.0.2.0/24\neth3 → eth2"| fwB
 ```
 
 Every node also has eth0 on `172.20.20.0/24`. That is the workshop network used to install tools. It is not a door from Site A to Site B. No lab port is published on the Codespace.
@@ -54,11 +58,16 @@ app-01                site-a-fw                 mgmt-01
 
 ```mermaid
 flowchart LR
-  app01[1 app-01 sends ping]
-  fwA[2 site-a-fw drops it]
-  mgmt01[3 mgmt-01 never receives it]
-  app01 --> fwA
-  fwA --> mgmt01
+  app01["app-01\n10.10.10.10\nsends ping to 10.10.20.10"]
+  fwA["site-a-fw\nforward chain: LOG then DROP\nprefix hm-site-a  group 1"]
+  mgmt01["mgmt-01\n10.10.20.10\nnever receives it"]
+  wg["WireGuard tunnel\nnot used by this packet"]
+
+  app01 -->|"via 10.10.10.1 eth1"| fwA
+  fwA -->|"✗ DROPPED — 100% loss"| mgmt01
+  fwA -. "packet dies here\ntunnel not involved" .-> wg
+  style mgmt01 stroke:#cc0000,stroke-width:2px
+  style wg stroke:#999,stroke-dasharray:5 5
 ```
 
 Say this while pointing: the rooms are separate. The guard writes down the attempt, then throws the packet away.
@@ -75,15 +84,16 @@ from 10.255.0.1                   192.0.2.1 to 192.0.2.2
 
 ```mermaid
 flowchart LR
-  note[1 local file on site-a-fw]
-  copy[2 TCP 514 from 10.255.0.1]
-  tube[3 WireGuard UDP 51820]
-  fwB[4 site-b-fw allows only this]
-  book[5 collector saves the line]
-  note --> copy
-  copy --> tube
-  tube --> fwB
-  fwB --> book
+  nft["/var/log/nft.log\non site-a-fw\nulogd reads NFLOG group 1"]
+  rsys["rsyslog\nsite-a-fw\nimfile → omfwd TCP 514"]
+  wg["WireGuard\nUDP 51820\n192.0.2.1 → 192.0.2.2\nsrc 10.255.0.1"]
+  fwB["site-b-fw\nforward: wg0→eth1\nsrc 10.255.0.1 dst 10.20.10.10 TCP 514 only"]
+  col["/var/log/site-a.log\ncollector\n10.20.10.10:514"]
+
+  nft -->|"tail -f"| rsys
+  rsys -->|"TCP 514\nout wg0"| wg
+  wg -->|"encrypted\nUDP 51820"| fwB
+  fwB -->|"decrypted\nTCP 514"| col
 ```
 
 Say this while pointing: the ping died in picture 2. Picture 3 is a copy of the note, carried through the locked tube.
