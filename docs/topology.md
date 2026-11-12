@@ -48,16 +48,21 @@ Every node also has eth0 on `172.20.20.0/24`. That is the workshop network used 
 
 ```mermaid
 flowchart LR
-  app01["app-01<br/>(10.10.10.10)"]
-  fwA{"site-a-fw<br/>nftables"}
-  mgmt01["mgmt-01<br/>(10.10.20.10)"]
+  app01["app-01<br/>10.10.10.10<br/>(Apps Zone)"]
+  fwA{"site-a-fw<br/>nftables: default-deny"}
+  dropped["✗ PACKET DROPPED<br/>(Dies at Gateway — 100% loss)"]
+  mgmt01["mgmt-01<br/>10.10.20.10<br/>(Never receives packet)"]
+  tunnel[/"WireGuard Tunnel<br/>(NOT USED by this packet)"/]
 
-  app01 -->|"1. Ping"| fwA
-  fwA -.->|"2. Log to NFLOG"| fwA
-  fwA --x|"3. DROP (100% loss)"| mgmt01
+  app01 -->|"1. Ping to 10.10.20.10"| fwA
+  fwA -->|"2. Forward chain drop"| dropped
+  dropped -.->|"Blocked from reaching"| mgmt01
+  fwA -.->|"3. Copy to NFLOG group 1"| fwA
+  fwA -.-x|"Does not enter"| tunnel
 
-  classDef drop fill:#ffdddd,stroke:#cc0000,stroke-width:2px;
-  class mgmt01 drop;
+  style dropped fill:#550000,stroke:#ff4444,stroke-width:2px,color:#ffffff
+  style mgmt01 fill:#222222,stroke:#666666,stroke-dasharray: 4 4,color:#888888
+  style tunnel fill:#1a1a1a,stroke:#555555,stroke-dasharray: 4 4,color:#aaaaaa
 ```
 
 The rooms are separate. The guard writes down the attempt, then throws the packet away.
