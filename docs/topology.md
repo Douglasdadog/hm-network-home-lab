@@ -60,7 +60,7 @@ flowchart LR
   class mgmt01 drop;
 ```
 
-Say this while pointing: the rooms are separate. The guard writes down the attempt, then throws the packet away.
+The rooms are separate. The guard writes down the attempt, then throws the packet away.
 
 ## Picture 3: only the diary line crosses
 
